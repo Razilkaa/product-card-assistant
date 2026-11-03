@@ -1,0 +1,6 @@
+*
+!src/
+!src/**
+!pyproject.toml
+!requirements.lock
+!Dockerfile

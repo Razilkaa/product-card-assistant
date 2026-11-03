@@ -1,0 +1,26 @@
+name: CI
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements-dev.lock
+      - run: pip install --no-deps -e .
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: pytest -q
+      - run: docker build -t product-writer:test .
+      - run: |
+          docker run -d --name api -p 8000:8000 product-writer:test
+          for attempt in $(seq 1 20); do
+            curl --fail http://localhost:8000/health && exit 0
+            sleep 1
+          done
+          docker logs api
+          exit 1

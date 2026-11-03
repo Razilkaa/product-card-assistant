@@ -1,0 +1,27 @@
+<?xml version='1.0' encoding='utf-8'?>
+<offers><offer id="73216" available="true">
+                <name>DT-133</name>
+                <typePrefix>термометр цифровой</typePrefix>
+                <url>https://www.souz-pribor.ru/product/dt-133/</url>
+                <categoryId>437</categoryId>
+                <vendor>CEM</vendor>
+                <vendorCode>481738</vendorCode>
+                <picture>https://www.souz-pribor.ru/upload/iblock/ab4/jb7egjn5jrh2jtw0h38lrt6hjkrmeol6/DT_133_23_07_21_2.jpg</picture>
+                <price>2940</price>
+                <currencyId>RUR</currencyId>
+                <param name="Артикул">481738</param>
+                <param name="Код товара">5260</param>
+            </offer>
+            <offer id="455704" available="true">
+                <name>VA6502</name>
+                <typePrefix>термометр</typePrefix>
+                <url>https://www.souz-pribor.ru/product/va6502/</url>
+                <categoryId>437</categoryId>
+                <vendor>V&amp;A</vendor>
+                <vendorCode />
+                <picture>https://www.souz-pribor.ru/upload/iblock/9a9/i8l4fr222u70gsrpw2760nyeimtfdhl9/VA6502.jpg</picture>
+                <price>2200</price>
+                <currencyId>RUR</currencyId>
+                <param name="Код товара">199391</param>
+            </offer>
+            </offers>
