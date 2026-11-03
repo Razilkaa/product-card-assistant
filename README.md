@@ -4,7 +4,7 @@
 
 ## Стек
 
-Python 3.11, FastAPI, Pydantic, HTTPX, uv, Docker. Тесты — pytest, проверка кода — Ruff.
+Python 3.11, FastAPI, Pydantic, HTTPX, uv, Docker. Тесты - pytest, проверка кода - Ruff.
 
 ## Запуск
 
@@ -15,7 +15,7 @@ uv sync --locked
 uv run uvicorn product_writer.app:app
 ```
 
-Сервис слушает порт 8000. Форма запросов — `/docs`, генерация — `POST /cards`. Примеры входных JSON находятся в `examples/`.
+Сервис слушает порт 8000. Форма запросов - `/docs`, генерация - `POST /cards`. Примеры входных JSON находятся в `examples/`.
 
 ## Docker
 
@@ -25,7 +25,7 @@ docker compose ps
 docker compose logs --tail=100 api
 ```
 
-Настройки берутся из `.env`, зависимости — из `uv.lock`. Порт доступен только на машине запуска. Остановка: `docker compose down`.
+Настройки берутся из `.env`, зависимости - из `uv.lock`. Порт доступен только на машине запуска. Остановка: `docker compose down`.
 
 ## Проверки
 
@@ -35,7 +35,7 @@ uv run ruff check .
 uv run ruff format --check .
 ```
 
-GitHub Actions выполняет проверки, собирает образ и проверяет запуск контейнера. `main` — основная ветка, `dev` — разработка.
+GitHub Actions выполняет проверки, собирает образ и проверяет запуск контейнера. `main` - основная ветка, `dev` - разработка.
 
 ## Данные
 
