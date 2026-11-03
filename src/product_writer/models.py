@@ -16,6 +16,17 @@ class Product(BaseModel):
     specs: dict[str, str] = Field(default_factory=dict, max_length=40)
     description: str = Field(default="", max_length=12000)
 
+    @field_validator("specs", mode="before")
+    @classmethod
+    def reject_collisions(cls, value):
+        if isinstance(value, dict):
+            keys = [k.strip().casefold() for k in value if isinstance(k, str)]
+            if len(keys) != len(set(keys)):
+                raise ValueError("Duplicate specification names after normalization")
+            if "производитель" in keys:
+                raise ValueError("Use manufacturer instead of specs.Производитель")
+        return value
+
     @field_validator("specs")
     @classmethod
     def clean_specs(cls, value: dict[str, str]) -> dict[str, str]:
