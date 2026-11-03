@@ -22,7 +22,13 @@ def draft():
 
 def run(product, payload, status=200):
     async def call():
-        transport = httpx.MockTransport(lambda request: httpx.Response(status, json=payload))
+        def respond(request):
+            body = json.loads(request.content)
+            verifying = "product" in json.loads(body["messages"][1]["content"])
+            result = envelope({"supported": True}) if verifying else payload
+            return httpx.Response(status, json=result)
+
+        transport = httpx.MockTransport(respond)
         async with httpx.AsyncClient(transport=transport) as client:
             return await generate(product, Settings(llm_api_key="test"), client)
 
@@ -115,3 +121,111 @@ def test_truncated_output(draft):
     payload["choices"][0]["finish_reason"] = "length"
     with pytest.raises(GenerationError, match="incomplete"):
         run(Product(name="x"), payload)
+
+
+@pytest.mark.parametrize("choice", [None, "invalid", 1, []])
+def test_invalid_choice_type(choice):
+    with pytest.raises(GenerationError, match="invalid response"):
+        run(Product(name="Манометр"), {"choices": [choice]})
+
+
+@pytest.mark.parametrize(
+    "specs",
+    [
+        {"Давление": "1", " Давление ": "2"},
+        {"Производитель": "B"},
+    ],
+)
+def test_rejects_specification_collisions(specs):
+    with TestClient(app) as client:
+        response = client.post(
+            "/cards",
+            json={
+                "name": "Манометр",
+                "manufacturer": "A",
+                "specs": specs,
+            },
+        )
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize(
+    "claim",
+    [
+        "Прибор водонепроницаемый и сертифицирован для взрывоопасных сред.",
+        "Диапазон давления 100 МПа",
+    ],
+)
+def test_rejects_unsupported_claims(draft, claim):
+    draft["commercial"] = claim
+
+    async def call():
+        requests = []
+
+        def respond(request):
+            requests.append(json.loads(request.content))
+            if len(requests) == 1:
+                return httpx.Response(200, json=envelope(draft))
+            return httpx.Response(200, json=envelope({"supported": False}))
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+            with pytest.raises(GenerationError, match="unsupported facts"):
+                await generate(
+                    Product(name="Манометр", specs={"Диаметр": "100 мм"}),
+                    Settings(llm_api_key="test"),
+                    client,
+                )
+        assert len(requests) == 2
+        evidence = json.loads(requests[1]["messages"][1]["content"])
+        assert evidence["product"]["specs"] == {"Диаметр": "100 мм"}
+        assert evidence["draft"]["commercial"] == claim
+
+    asyncio.run(call())
+
+
+@pytest.mark.parametrize(
+    "verdict", [None, {}, {"supported": "true"}, {"supported": 1}, {"supported": True, "extra": 1}]
+)
+def test_invalid_verification_fails_closed(draft, verdict):
+    async def call():
+        responses = iter([envelope(draft), envelope(verdict)])
+        transport = httpx.MockTransport(lambda request: httpx.Response(200, json=next(responses)))
+        async with httpx.AsyncClient(transport=transport) as client:
+            with pytest.raises(GenerationError, match="invalid verification"):
+                await generate(Product(name="Манометр"), Settings(llm_api_key="test"), client)
+
+    asyncio.run(call())
+
+
+@pytest.mark.parametrize("failure", ["timeout", "http", "json"])
+def test_verification_failure(draft, failure):
+    async def call():
+        calls = 0
+
+        def respond(request):
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                return httpx.Response(200, json=envelope(draft))
+            if failure == "timeout":
+                raise httpx.ReadTimeout("verification timeout")
+            if failure == "http":
+                return httpx.Response(503)
+            return httpx.Response(200, text="invalid json")
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+            with pytest.raises(GenerationError):
+                await generate(Product(name="Манометр"), Settings(llm_api_key="test"), client)
+        assert calls == 2
+
+    asyncio.run(call())
+
+
+def test_preserves_nonconflicting_specs(draft):
+    result = run(
+        Product(
+            name="Манометр", manufacturer="A", specs={" Давление ": " 1 МПа ", "Материал": "Сталь"}
+        ),
+        envelope(draft),
+    )
+    assert result.specifications == {"Производитель": "A", "Давление": "1 МПа", "Материал": "Сталь"}
