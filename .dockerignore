@@ -2,5 +2,5 @@
 !src/
 !src/**
 !pyproject.toml
-!requirements.lock
+!uv.lock
 !Dockerfile

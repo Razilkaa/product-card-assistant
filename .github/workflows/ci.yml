@@ -1,5 +1,9 @@
 name: CI
-on: [push, pull_request]
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
 permissions:
   contents: read
 jobs:
@@ -10,17 +14,20 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: pip install -r requirements-dev.lock
-      - run: pip install --no-deps -e .
-      - run: ruff check .
-      - run: ruff format --check .
-      - run: pytest -q
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: '0.13.7'
+      - run: uv sync --locked
+      - run: uv run --locked ruff check .
+      - run: uv run --locked ruff format --check .
+      - run: uv run --locked pytest -q
       - run: docker build -t product-writer:test .
       - run: |
-          docker run -d --name api -p 8000:8000 product-writer:test
+          docker run -d --name api product-writer:test
           for attempt in $(seq 1 20); do
-            curl --fail http://localhost:8000/health && exit 0
-            sleep 1
+            status=$(docker inspect --format '{{.State.Health.Status}}' api)
+            [ "$status" = healthy ] && exit 0
+            sleep 3
           done
           docker logs api
           exit 1
